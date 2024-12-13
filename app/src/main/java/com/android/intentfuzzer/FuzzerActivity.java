@@ -24,6 +24,7 @@ import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -34,12 +35,17 @@ public class FuzzerActivity extends Activity{
 	private String currentType = null;
 	private Spinner typeSpinner = null;
 	private ListView cmpListView = null;
+	private ListView blackListView = null;
 	private Button fuzzAllNullBtn = null;
 	private Button fuzzAllSeBtn = null;
+	private EditText blackeditEdit = null;
+	private Button blackBtn = null;
+
 	
 	private ArrayAdapter<String> cmpAdapter = null;
 	
 	private ArrayList<String> cmpNames = new ArrayList<String>();
+	private ArrayList<String> blackNames = new ArrayList<String>();
 	private ArrayList<ComponentName> components = new ArrayList<ComponentName>();
 	private PackageInfo pkgInfo = null;
 	
@@ -96,8 +102,11 @@ public class FuzzerActivity extends Activity{
 	private void initView(){
 		typeSpinner = (Spinner) findViewById(R.id.type_select);
 		cmpListView = (ListView) findViewById(R.id.cmp_listview);
+		blackListView = (ListView) findViewById(R.id.black_listview);
 		fuzzAllNullBtn = (Button) findViewById(R.id.fuzz_all_null);
 		fuzzAllSeBtn = (Button) findViewById(R.id.fuzz_all_se);
+		blackeditEdit = (EditText) findViewById(R.id.blackedit);
+		blackBtn = (Button) findViewById(R.id.blackbtn);
 		
 	    cmpListView.setOnItemClickListener(new OnItemClickListener(){
 
@@ -141,7 +150,7 @@ public class FuzzerActivity extends Activity{
 				}
 				
 				intent.setComponent(toSend);
-				intent.putExtra("test", new SerializableTest());
+				//intent.putExtra("test", new SerializableTest());
 
 				if (sendIntentByType(intent, currentType)) {
 					Toast.makeText(FuzzerActivity.this, "Sent Serializeable " + intent, Toast.LENGTH_LONG).show();
@@ -190,6 +199,20 @@ public class FuzzerActivity extends Activity{
 			}
 	    	
 	    });
+		blackBtn.setOnClickListener(new OnClickListener(){
+
+			@Override
+			public void onClick(View v) {
+				// TODO Auto-generated method stub
+				String actstr = blackeditEdit.getText().toString();
+				blackNames.add(actstr);
+				ArrayAdapter<String>  blackAdapter = new ArrayAdapter<String>(v.getContext(), R.layout.component, blackNames );
+				blackListView.setAdapter(blackAdapter);
+				Toast.makeText(FuzzerActivity.this, "Add Black: " + actstr, Toast.LENGTH_LONG).show();
+				//setListView();
+			}
+
+		});
 
 	}
 	
@@ -274,9 +297,22 @@ public class FuzzerActivity extends Activity{
 		cmpAdapter = new ArrayAdapter<String>(this, R.layout.component, cmpNames );
 		cmpListView.setAdapter(cmpAdapter);
 	}
+	private boolean filterBlackList(String instr){
+		for(String val:blackNames){
+			if (instr.indexOf(val) >= 0){
+				return true;
+			}
+		}
+		return false;
+	}
 	
 	private boolean sendIntentByType(Intent intent, String type) {
 		boolean bret = false;
+		LogUtils.e("getClassName:" +intent.getComponent().getClassName().toString());
+		if(filterBlackList(intent.getComponent().getClassName().toString())){
+			LogUtils.e("blackList:" + intent.getComponent().getClassName().toString());
+			return false;
+		}
 		try {
 				switch (ipcNamesToTypes.get(type)) {
 				case Utils.ACTIVITIES:
